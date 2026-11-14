@@ -6,8 +6,8 @@ import {
   Download, Copy, Filter, Trash2
 } from 'lucide-react';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'SUA_URL_SUPABASE';
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'SUA_ANON_KEY_SUPABASE';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://fqfiwjjyzattphzalhzv.supabase.co';
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_neLGQDeB5Tt03IncNC2m7g__pwDD-g0';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const BASE_INICIAL_OLV = [
@@ -60,6 +60,33 @@ const BASE_INICIAL_OLV = [
   { fornecedor: "Hortifruti", item: "Salsa", unidade: "un", qtd_por_embalagem: null, unidade_base: null, prev_terca: 2, prev_sexta: 2, estoque_minimo: 1 },
   { fornecedor: "Hortifruti", item: "Tomate", unidade: "cx", qtd_por_embalagem: 20, unidade_base: "kg", prev_terca: 1, prev_sexta: 1, estoque_minimo: 1 },
 ];
+
+const GatinhoClique = () => {
+  const [cliques, setCliques] = useState([]);
+
+  useEffect(() => {
+    const handlePointerDown = (e) => {
+      const novoClique = { id: Date.now() + Math.random(), x: e.clientX, y: e.clientY };
+      setCliques((prev) => [...prev.slice(-6), novoClique]);
+    };
+    window.addEventListener('pointerdown', handlePointerDown);
+    return () => window.removeEventListener('pointerdown', handlePointerDown);
+  }, []);
+
+  return (
+    <div className="pointer-events-none fixed inset-0 z-50 overflow-hidden">
+      {cliques.map((c) => (
+        <span
+          key={c.id}
+          className="absolute text-orange-500 animate-ping text-lg select-none drop-shadow-md"
+          style={{ left: c.x - 12, top: c.y - 12 }}
+        >
+          🐾
+        </span>
+      ))}
+    </div>
+  );
+};
 
 const AnelOrganico = ({ quantidade }) => {
   const qtd = Math.min(Math.max(Number(quantidade) || 0, 0), 12);
@@ -154,13 +181,6 @@ export default function App() {
     setAuthError('');
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) setAuthError('E-mail ou senha inválidos. Miau!');
-  };
-
-  const handleSignUp = async () => {
-    setAuthError('');
-    const { error } = await supabase.auth.signUp({ email, password });
-    if (error) setAuthError(error.message);
-    else setAuthError('Conta criada! Clique em Entrar.');
   };
 
   const importarBasePadrao = async () => {
@@ -288,19 +308,6 @@ export default function App() {
         const alvo = Math.max(previsao || 0, it.estoque_minimo || 0);
         const sugestao = estoque !== null ? Math.max(0, alvo - estoque) : (previsao || 0);
 
-        let status = '—';
-        let variacaoPct = null;
-        if (pedido !== null) {
-          if (!previsao) {
-            status = 'Sem previsão';
-          } else {
-            variacaoPct = ((pedido - previsao) / previsao) * 100;
-            if (Math.abs(variacaoPct) <= tolerancia) status = 'OK';
-            else if (variacaoPct > tolerancia) status = 'Acima';
-            else status = 'Abaixo';
-          }
-        }
-
         const qtdEfetivaPedido = pedido !== null ? pedido : sugestao;
         const subtotal = qtdEfetivaPedido * preco;
         const equivalente = it.qtd_por_embalagem && qtdEfetivaPedido > 0
@@ -319,10 +326,10 @@ export default function App() {
 
         return {
           ...it, previsao, estoque, pedido, preco, sugestao,
-          status, variacaoPct, qtdEfetivaPedido, subtotal, equivalente, tendencia
+          qtdEfetivaPedido, subtotal, equivalente, tendencia
         };
       });
-  }, [itens, diaPedido, fornecedorFiltro, busca, contagemAtual, tolerancia, historico]);
+  }, [itens, diaPedido, fornecedorFiltro, busca, contagemAtual, historico]);
 
   const pedidosPorFornecedor = useMemo(() => {
     const grupos = {};
@@ -350,6 +357,7 @@ export default function App() {
   if (!session) {
     return (
       <div className="min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center p-4">
+        <GatinhoClique />
         <div className="w-full max-w-md bg-zinc-900 border border-orange-500/30 rounded-2xl p-6 shadow-2xl">
           <div className="flex flex-col items-center mb-6">
             <div className="w-16 h-16 bg-orange-500 rounded-2xl flex items-center justify-center text-zinc-950 mb-3 shadow-lg shadow-orange-500/20">
@@ -380,9 +388,6 @@ export default function App() {
             <button type="submit" className="w-full bg-orange-500 hover:bg-orange-600 text-zinc-950 font-bold py-3 rounded-xl transition">
               Entrar na Unidade 🐾
             </button>
-            <button type="button" onClick={handleSignUp} className="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm py-2.5 rounded-xl transition">
-              Criar Novo Acesso (Unidade)
-            </button>
           </form>
         </div>
       </div>
@@ -391,6 +396,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 pb-20">
+      <GatinhoClique />
       <header className="bg-zinc-900 border-b border-orange-500/30 sticky top-0 z-30 px-4 py-3">
         <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -499,17 +505,6 @@ export default function App() {
                   <option key={f} value={f}>{f === 'TODOS' ? 'Todos Fornecedores' : f}</option>
                 ))}
               </select>
-            </div>
-
-            <div className="flex items-center gap-2 text-xs text-zinc-400">
-              <span>Tolerância ±</span>
-              <input
-                type="number"
-                value={tolerancia}
-                onChange={e => setTolerancia(Number(e.target.value))}
-                className="w-14 bg-zinc-950 border border-zinc-800 rounded-lg py-1 text-center text-white"
-              />
-              <span>%</span>
             </div>
 
             <button
@@ -686,9 +681,7 @@ export default function App() {
         {abaAtiva === 'analise' && (
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
             <h2 className="font-bold text-lg mb-1">Análise de Aumento ou Queda Semanal</h2>
-            <p className="text-xs text-zinc-400 mb-4">
-              Comparação de consumo entre os registros salvos desta unidade.
-            </p>
+            <p className="text-xs text-zinc-400 mb-4">Comparação de consumo entre os registros salvos desta unidade.</p>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {itensProcessados.map(it => (
                 <div key={it.id} className="bg-zinc-950 border border-zinc-800 rounded-xl p-3 flex items-center justify-between">
